@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  ad-analytics:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_PATH=analytics.db
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

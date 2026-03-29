@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ad Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-card: #1e293b;
+            --bg-hover: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-yellow: #eab308;
+            --accent-purple: #a855f7;
+            --border: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+            padding: 24px 40px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .pipeline-badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .pipeline-badge.completed {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .pipeline-badge.running {
+            background: rgba(234, 179, 8, 0.15);
+            color: var(--accent-yellow);
+            border: 1px solid rgba(234, 179, 8, 0.3);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px 40px;
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .kpi-card .label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 8px;
+        }
+
+        .kpi-card .sub {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .kpi-card.green .value {
+            color: var(--accent-green);
+        }
+
+        .kpi-card.blue .value {
+            color: var(--accent-blue);
+        }
+
+        .kpi-card.purple .value {
+            color: var(--accent-purple);
+        }
+
+        .kpi-card.yellow .value {
+            color: var(--accent-yellow);
+        }
+
+        /* Chart Grid */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .chart-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .chart-card canvas {
+            max-height: 300px;
+        }
+
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* Anomaly Section */
+        .anomaly-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .anomaly-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .anomaly-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 12px;
+        }
+
+        .anomaly-card {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            border-radius: 8px;
+            padding: 14px;
+        }
+
+        .anomaly-card .anomaly-type {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--accent-red);
+            letter-spacing: 0.5px;
+        }
+
+        .anomaly-card .anomaly-detail {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            line-height: 1.5;
+        }
+
+        /* Campaign Table */
+        .table-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .table-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            color: var(--accent-blue);
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        tr:hover td {
+            background: var(--bg-hover);
+        }
+
+        .status-badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-completed {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--accent-green);
+        }
+
+        .status-active {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent-blue);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 16px;
+            }
+
+            .header {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div>
+            <h1>Ad Campaign Analytics</h1>
+            <div class="subtitle">Multi-Stage ETL Pipeline Dashboard</div>
+        </div>
+        <div id="pipeline-badge" class="pipeline-badge">Loading...</div>
+    </div>
+
+    <div class="container">
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="kpi-grid">
+            <div class="loading">Loading KPI data...</div>
+        </div>
+
+        <!-- Charts -->
+        <div class="chart-grid">
+            <div class="chart-card">
+                <h3>Revenue vs Spend by Channel</h3>
+                <canvas id="channelBarChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>ROI by Channel (%)</h3>
+                <canvas id="roiChart"></canvas>
+            </div>
+            <div class="chart-card full-width">
+                <h3>Daily Spend & Revenue Trend</h3>
+                <canvas id="dailyTrendChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Conversion Rate by Channel</h3>
+                <canvas id="conversionChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Spend Distribution</h3>
+                <canvas id="spendPieChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Anomalies -->
+        <div class="anomaly-section">
+            <h3>Anomaly Detection Alerts</h3>
+            <div class="anomaly-grid" id="anomaly-grid">
+                <div class="loading">Scanning for anomalies...</div>
+            </div>
+        </div>
+
+        <!-- Campaign Table -->
+        <div class="table-section">
+            <h3>Campaign Performance Summary</h3>
+            <table id="campaign-table">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">Campaign</th>
+                        <th onclick="sortTable(1)">Channel</th>
+                        <th onclick="sortTable(2)">Status</th>
+                        <th onclick="sortTable(3)">Budget</th>
+                        <th onclick="sortTable(4)">Spend</th>
+                        <th onclick="sortTable(5)">Revenue</th>
+                        <th onclick="sortTable(6)">Conversions</th>
+                        <th onclick="sortTable(7)">ROI</th>
+                    </tr>
+                </thead>
+                <tbody id="campaign-tbody">
+                    <tr>
+                        <td colspan="8" class="loading">Loading campaigns...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const COLORS = {
+            blue: '#3b82f6',
+            green: '#22c55e',
+            red: '#ef4444',
+            yellow: '#eab308',
+            purple: '#a855f7',
+            cyan: '#06b6d4',
+            orange: '#f97316',
+            pink: '#ec4899',
+        };
+
+        const CHANNEL_COLORS = ['#3b82f6', '#22c55e', '#a855f7', '#f97316', '#06b6d4'];
+
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
+        Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+        function formatCurrency(n) {
+            if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K';
+            return '$' + n.toFixed(0);
+        }
+
+        function formatNumber(n) {
+            if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+            return n.toString();
+        }
+
+        // ── Load KPIs ──
+        async function loadKPIs() {
+            const res = await fetch('/analytics/kpi');
+            const data = await res.json();
+
+            const roi = data.overall_roi;
+            const roiColor = roi >= 0 ? 'green' : 'red';
+
+            document.getElementById('kpi-grid').innerHTML = `
+                <div class="kpi-card blue">
+                    <div class="label">Total Spend</div>
+                    <div class="value">${formatCurrency(data.total_spend)}</div>
+                    <div class="sub">${data.total_records} daily records</div>
+                </div>
+                <div class="kpi-card green">
+                    <div class="label">Total Revenue</div>
+                    <div class="value">${formatCurrency(data.total_revenue)}</div>
+                    <div class="sub">Net: ${formatCurrency(data.net_profit)}</div>
+                </div>
+                <div class="kpi-card ${roiColor}">
+                    <div class="label">Overall ROI</div>
+                    <div class="value">${roi.toFixed(1)}%</div>
+                    <div class="sub">${data.data_start_date} to ${data.data_end_date}</div>
+                </div>
+                <div class="kpi-card purple">
+                    <div class="label">Campaigns</div>
+                    <div class="value">${data.total_campaigns}</div>
+                    <div class="sub">${data.total_channels} channels</div>
+                </div>
+                <div class="kpi-card yellow">
+                    <div class="label">Conversions</div>
+                    <div class="value">${formatNumber(data.total_conversions)}</div>
+                    <div class="sub">${data.overall_conversion_rate}% conv rate</div>
+                </div>
+                <div class="kpi-card blue">
+                    <div class="label">Total Clicks</div>
+                    <div class="value">${formatNumber(data.total_clicks)}</div>
+                    <div class="sub">${formatNumber(data.total_impressions)} impressions</div>
+                </div>
+            `;
+        }
+
+        // ── Load Pipeline Status ──
+        async function loadPipelineStatus() {
+            const res = await fetch('/pipeline/status');
+            const data = await res.json();
+            const badge = document.getElementById('pipeline-badge');
+            badge.textContent = `Pipeline: ${data.status} (${data.duration_seconds}s)`;
+            badge.className = `pipeline-badge ${data.status}`;
+        }
+
+        // ── Channel Charts ──
+        async function loadChannelCharts() {
+            const res = await fetch('/analytics/channels');
+            const data = await res.json();
+            const channels = data.channels;
+
+            const labels = channels.map(c => c.channel);
+            const spend = channels.map(c => c.total_spend);
+            const revenue = channels.map(c => c.total_revenue);
+            const roi = channels.map(c => c.roi_percent);
+            const convRate = channels.map(c => c.conversion_rate);
+
+            // Bar chart: Spend vs Revenue
+            new Chart(document.getElementById('channelBarChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Spend', data: spend, backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 4 },
+                        { label: 'Revenue', data: revenue, backgroundColor: 'rgba(34,197,94,0.7)', borderRadius: 4 },
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                        y: { ticks: { callback: v => formatCurrency(v) }, grid: { color: 'rgba(51,65,85,0.3)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // Horizontal bar: ROI
+            new Chart(document.getElementById('roiChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'ROI %',
+                        data: roi,
+                        backgroundColor: roi.map(v => v >= 0 ? 'rgba(34,197,94,0.7)' : 'rgba(239,68,68,0.7)'),
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { callback: v => v + '%' }, grid: { color: 'rgba(51,65,85,0.3)' } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // Conversion Rate
+            new Chart(document.getElementById('conversionChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Conv Rate %',
+                        data: convRate,
+                        backgroundColor: CHANNEL_COLORS,
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { callback: v => v + '%' }, grid: { color: 'rgba(51,65,85,0.3)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // Pie: Spend distribution
+            new Chart(document.getElementById('spendPieChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: spend,
+                        backgroundColor: CHANNEL_COLORS,
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'right', labels: { padding: 16 } },
+                        tooltip: {
+                            callbacks: { label: ctx => `${ctx.label}: ${formatCurrency(ctx.parsed)}` }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ── Daily Trend ──
+        async function loadDailyTrend() {
+            const res = await fetch('/analytics/daily');
+            const data = await res.json();
+            const daily = data.daily;
+
+            new Chart(document.getElementById('dailyTrendChart'), {
+                type: 'line',
+                data: {
+                    labels: daily.map(d => d.date),
+                    datasets: [
+                        {
+                            label: 'Daily Spend',
+                            data: daily.map(d => d.total_spend),
+                            borderColor: COLORS.blue,
+                            backgroundColor: 'rgba(59,130,246,0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            borderWidth: 2,
+                        },
+                        {
+                            label: 'Daily Revenue',
+                            data: daily.map(d => d.total_revenue),
+                            borderColor: COLORS.green,
+                            backgroundColor: 'rgba(34,197,94,0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            borderWidth: 2,
+                        },
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                        y: { ticks: { callback: v => formatCurrency(v) }, grid: { color: 'rgba(51,65,85,0.3)' } },
+                        x: {
+                            grid: { display: false },
+                            ticks: { maxTicksLimit: 12, maxRotation: 0 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ── Anomalies ──
+        async function loadAnomalies() {
+            const res = await fetch('/analytics/anomalies?threshold=2.0');
+            const data = await res.json();
+            const anomalies = data.anomalies.slice(0, 12);
+            const grid = document.getElementById('anomaly-grid');
+
+            if (anomalies.length === 0) {
+                grid.innerHTML = '<p style="color: var(--accent-green);">No anomalies detected.</p>';
+                return;
+            }
+
+            const typeLabels = {
+                'cost_deviation': 'Cost Deviation',
+                'zero_conversions': 'Zero Conversions',
+                'clicks_exceed_impressions': 'Invalid Data',
+                'spend_no_impressions': 'Spend Without Impressions',
+            };
+
+            grid.innerHTML = anomalies.map(a => `
+                <div class="anomaly-card">
+                    <div class="anomaly-type">${typeLabels[a.anomaly_type] || a.anomaly_type}</div>
+                    <div class="anomaly-detail">
+                        <strong>${a.campaign_name}</strong> (${a.channel})<br>
+                        Date: ${a.date} &middot; Spend: ${formatCurrency(a.spend)}<br>
+                        Clicks: ${a.clicks} &middot; Conversions: ${a.conversions}
+                        ${a.cost_per_conv !== null ? `<br>CPC: $${a.cost_per_conv} (avg: $${a.channel_avg_cpc})` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ── Campaign Table ──
+        let campaignData = [];
+        let sortCol = 4;
+        let sortAsc = false;
+
+        async function loadCampaigns() {
+            const res = await fetch('/campaigns');
+            const data = await res.json();
+            campaignData = data.campaigns;
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('campaign-tbody');
+            const sorted = [...campaignData].sort((a, b) => {
+                const keys = ['campaign_name', 'channel', 'status', 'budget', 'total_spend', 'total_revenue', 'total_conversions', 'roi'];
+                const key = keys[sortCol];
+
+                let va, vb;
+                if (key === 'roi') {
+                    va = a.total_spend > 0 ? (a.total_revenue - a.total_spend) / a.total_spend * 100 : 0;
+                    vb = b.total_spend > 0 ? (b.total_revenue - b.total_spend) / b.total_spend * 100 : 0;
+                } else {
+                    va = a[key]; vb = b[key];
+                }
+
+                if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+                return sortAsc ? va - vb : vb - va;
+            });
+
+            tbody.innerHTML = sorted.map(c => {
+                const roi = c.total_spend > 0 ? ((c.total_revenue - c.total_spend) / c.total_spend * 100).toFixed(1) : '0.0';
+                const roiClass = parseFloat(roi) >= 0 ? 'color: var(--accent-green)' : 'color: var(--accent-red)';
+                return `<tr>
+                    <td>${c.campaign_name}</td>
+                    <td>${c.channel}</td>
+                    <td><span class="status-badge status-${c.status}">${c.status}</span></td>
+                    <td>${formatCurrency(c.budget)}</td>
+                    <td>${formatCurrency(c.total_spend)}</td>
+                    <td>${formatCurrency(c.total_revenue)}</td>
+                    <td>${formatNumber(c.total_conversions)}</td>
+                    <td style="${roiClass}">${roi}%</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function sortTable(col) {
+            if (sortCol === col) { sortAsc = !sortAsc; }
+            else { sortCol = col; sortAsc = false; }
+            renderTable();
+        }
+
+        // ── Initialize ──
+        Promise.all([
+            loadKPIs(),
+            loadPipelineStatus(),
+            loadChannelCharts(),
+            loadDailyTrend(),
+            loadAnomalies(),
+            loadCampaigns(),
+        ]).catch(err => console.error('Dashboard load error:', err));
+    </script>
+</body>
+
+</html>
